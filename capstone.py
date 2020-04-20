@@ -1,24 +1,18 @@
-# https://www.avanwyk.com/tensorflow-2-super-convergence-with-the-1cycle-policy/
-# https://github.com/kpe/bert-for-tf2/
-# requires tf 2.0
-# !pip install -y bert-tensorflow
-
-
 import os
-import numpy as np
-import bert
-from tensorflow import keras
-from sklearn.utils.class_weight import compute_class_weight
+import argparse
+import json
 from datetime import datetime
-# from onecycle import OneCycleScheduler
+import numpy as np
+from sklearn.utils.class_weight import compute_class_weight
+from sklearn.metrics import balanced_accuracy_score
+from tensorflow import keras
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+import bert # https://github.com/kpe/bert-for-tf2/
+from onecycle import OneCycleScheduler # https://www.avanwyk.com/tensorflow-2-super-convergence-with-the-1cycle-policy/
 from imdb import get_imdb_data
 from tweets import get_tweets_data
 from amazon import get_reviews_data
-from sklearn.metrics import balanced_accuracy_score
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
-from tensorflow.keras.models import load_model
-import argparse
-import json
+
 
 parser = argparse.ArgumentParser()
 
@@ -32,15 +26,16 @@ parser.add_argument("--ckpt_name", type=str, default="bert_model.ckpt", help="Na
 parser.add_argument("--bert_base_path", type=str, default="D:/bert_models/", help="Where to find BERT models.")
 parser.add_argument("--model_name", type=str, default=None, help="Name of BERT model. Default depends on task.")
 parser.add_argument("--data_dir", type=str, default="data", help="Data directory.")
-parser.add_argument("--log_dir", type=str, default="logs", help="Log directory.")
+parser.add_argument("--log_dir", type=str, default="D:\\logs", help="Log directory.")
 # training parameters
 parser.add_argument("--batch_size", type=int, default=2, help="Batch size.")
+parser.add_argument("--patience", type=int, default=3, help="Patience for early stopping.")
 parser.add_argument("--learning_rate", type=float, default=2e-5, help="Learning rate.")
 parser.add_argument("--max_seq_length", type=int, default=512, help="Maximum frequence length.")
-parser.add_argument("--no_class_weights", action='store_false', help="Don't use class weights.")
-parser.add_argument("--num_epochs", type=int, default=10, help="Maximum number of epochs.")
+parser.add_argument("--no_class_weights", action='store_true', help="Don't use class weights.")
+parser.add_argument("--num_epochs", type=int, default=3, help="Maximum number of epochs.")
 parser.add_argument("--test_size", type=float, default=None, help="Test size. Default depends on task.")
-parser.add_argument("--num_categories", type=str, default=None, help="Number of categoroies. Defaults to 2 for imdb, 3 otherwise.")
+parser.add_argument("--num_categories", type=int, default=None, help="Number of categoroies. Defaults to 2 for imdb, 3 otherwise.")
 print('Experiment name is ' + current_time + '.')
 
 # read variables
@@ -50,7 +45,7 @@ batch_size = ARGS.batch_size
 learning_rate = ARGS.learning_rate
 max_seq_length = ARGS.max_seq_length
 ckpt_name = ARGS.ckpt_name
-use_class_weights = ARGS.no_class_weights
+use_class_weights = not ARGS.no_class_weights
 num_epochs = ARGS.num_epochs
 task = ARGS.task
 bert_base_path = ARGS.bert_base_path
@@ -60,6 +55,7 @@ test_size = ARGS.test_size
 subtask = ARGS.subtask
 data_dir = ARGS.data_dir
 log_dir = ARGS.log_dir
+patience = ARGS.patience
 
 if task == "imdb":
     if model_name == None:
@@ -129,10 +125,10 @@ if __name__ == "__main__":
         test_labels
         ) = get_data(task, subtask, num_categories, data_dir, tokenizer, max_seq_length, test_size)
         
-    # steps = np.ceil(train_input_ids.shape[0] / batch_size) * num_epochs
-    # lr_schedule = OneCycleScheduler(learning_rate, steps)
-    es = EarlyStopping(monitor='val_SparseCategoricalAccuracy', mode='max', verbose=1, patience=5)
-    mc = ModelCheckpoint(os.path.join(logdir, 'best_model.h5'), monitor='val_SparseCategoricalAccuracy', mode='max', save_best_only=True)
+    steps = np.ceil(train_input_ids.shape[0] / batch_size) * num_epochs
+    lr_schedule = OneCycleScheduler(learning_rate, steps)
+    es = EarlyStopping(monitor='val_SparseCategoricalAccuracy', mode='max', verbose=1, patience=patience)
+    mc = ModelCheckpoint(os.path.join(log_dir, 'best_model.h5'), monitor='val_SparseCategoricalAccuracy', mode='max', save_best_only=True, save_weights_only=True)
     bert_params = bert.params_from_pretrained_ckpt(bert_path)
     l_bert = bert.BertModelLayer.from_params(bert_params, name="bert")
     in_id = keras.layers.Input(shape=(max_seq_length,), name="input_ids")
@@ -149,8 +145,8 @@ if __name__ == "__main__":
     
     model.summary()
 
-    tensorboard_callback = keras.callbacks.TensorBoard(log_dir=logdir, histogram_freq=0,
-                          write_graph=True, write_images=False)
+    tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=0,
+                          write_graph=False, write_images=False, update_freq=1000)
     y = np.concatenate([train_labels, test_labels]).flatten()
     wgt = compute_class_weight('balanced', np.unique(y), y)
     if not use_class_weights:
@@ -164,9 +160,10 @@ if __name__ == "__main__":
         shuffle=True,
         epochs=num_epochs,
         batch_size=batch_size,        
-        callbacks=[tensorboard_callback]
+        callbacks=[tensorboard_callback, es, mc, lr_schedule]
     )
-    model = load_model('best_model.h5')
+    model.load_weights(os.path.join(log_dir, 'best_model.h5'))
+    print("Reloaded best parameters.")
     y_pred = model.predict(test_input_ids)
     y_pred = np.argmax(y_pred, axis=1)
     BMAC = balanced_accuracy_score(test_labels, y_pred)

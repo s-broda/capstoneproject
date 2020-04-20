@@ -47,7 +47,7 @@ def download_dataset(data_dir):
 
 def load_datasets(data_dir, test_size, num_categories):
     data = download_dataset(data_dir)
-    data['sentiment'] = data.apply(lambda row: sentiment(row.star_rating, num_categories), axis=1)
+    data['sentiment'] = data.apply(lambda row: sentiment(row.star_rating), axis=1)
     if num_categories == 2:
         data = data[np.logical_or(data.star_rating==1, data.star_rating==5)]
     grouped = data.groupby('sentiment')
@@ -65,7 +65,7 @@ def load_datasets(data_dir, test_size, num_categories):
 
 
 def get_reviews_data(data_dir, subtask, num_categories, tokenizer, max_seq_length, test_size):
-    X_train, y_train, X_test, y_test = load_datasets(data_dir, test_size, num_categories)
+    
     fn = os.path.join(data_dir, "data_"+subtask+"_"+str(num_categories)+"cat_"+str(max_seq_length)+".npz")
     if Path(fn).is_file():
         f= np.load(fn)
@@ -79,7 +79,7 @@ def get_reviews_data(data_dir, subtask, num_categories, tokenizer, max_seq_lengt
         test_labels = f['test_labels']
         f.close()
     else:
-        X_train, y_train, X_test, y_test = load_datasets(data_dir, test_size)
+        X_train, y_train, X_test, y_test = load_datasets(data_dir, test_size, num_categories)
 
         # Create datasets (Only take up to max_seq_length words for memory)
         train_text = X_train.to_list()
