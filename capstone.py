@@ -36,6 +36,7 @@ parser.add_argument("--no_class_weights", action='store_true', help="Don't use c
 parser.add_argument("--num_epochs", type=int, default=3, help="Maximum number of epochs.")
 parser.add_argument("--test_size", type=float, default=None, help="Test size. Default depends on task.")
 parser.add_argument("--num_categories", type=int, default=None, help="Number of categoroies. Defaults to 2 for imdb, 3 otherwise.")
+parser.add_argument("--polarized", action='store_true', help="For reviews data: if true and num_categories=3, count only 1 and 5 as pos/neg")
 print('Experiment name is ' + current_time + '.')
 
 # read variables
@@ -56,6 +57,7 @@ subtask = ARGS.subtask
 data_dir = ARGS.data_dir
 log_dir = ARGS.log_dir
 patience = ARGS.patience
+polarized = ARGS.polarized
 
 if task == "imdb":
     if model_name == None:
@@ -102,7 +104,7 @@ def get_data(task, subtask, num_categories, data_dir, tokenizer, max_seq_length,
     elif task == "tweets":
         return get_tweets_data(data_dir, subtask, num_categories, tokenizer, max_seq_length, test_size)
     elif task == "reviews":
-        return get_reviews_data(data_dir, subtask, num_categories, tokenizer, max_seq_length, test_size)
+        return get_reviews_data(data_dir, subtask, num_categories, tokenizer, max_seq_length, test_size, polarized)
     else:
         raise Exception('No such task.')
 
