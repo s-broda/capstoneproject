@@ -11,7 +11,7 @@ Babel==2.8.0
 backcall==0.1.0
 bcrypt==3.1.7
 bert-for-tf2==0.13.4
-bleach==3.1.0
+bleach==3.1.4
 certifi==2020.4.5.1
 cffi==1.14.0
 chardet==3.0.4
