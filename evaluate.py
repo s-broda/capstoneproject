@@ -140,7 +140,8 @@ def get_data(data_dir):
 if __name__ == "__main__":
     
     test = get_data(data_dir)
-    
+    if num_categories == 2:
+        test = test[test.label != 2] # drop neutrals
     bert_path = os.path.join(bert_base_path, model_name)
     model_ckpt = os.path.join(bert_path, ckpt_name)
     do_lower_case = model_name.find("uncased") != -1
