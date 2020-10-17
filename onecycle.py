@@ -27,12 +27,9 @@ class OneCycleScheduler(Callback):
     If the model supports a momentum parameter, it will also be adapted by the schedule.
     The implementation adopts additional improvements as per the fastai library: https://docs.fast.ai/callbacks.one_cycle.html, where
     only two phases are used and the adaptation is done using cosine annealing.
-    In phase 1 the LR increases from lrmax÷fac→r to lrmax and momentum decreases from mommax to mommin
-.
-    In the second phase the LR decreases from lrmax to lrmax÷fac→r⋅1e4 and momemtum from mommax to mommin
-.
-    By default the phases are not of equal length, with the phase 1 percentage controlled by the parameter phase1_pct
-.
+    In phase 1 the LR increases from lrmax÷fac->r to lrmax and momentum decreases from mommax to mommin.
+    In the second phase the LR decreases from lrmax to lrmax÷fac->r*1e4 and momemtum from mommax to mommin.
+    By default the phases are not of equal length, with the phase 1 percentage controlled by the parameter phase1_pct.
     """
 
     def __init__(self, lr_max, steps, mom_min=0.85, mom_max=0.95, phase_1_pct=0.3, div_factor=25.):
