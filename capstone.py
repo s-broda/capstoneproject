@@ -5,6 +5,7 @@ from datetime import datetime
 import numpy as np
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.metrics import balanced_accuracy_score
+from sklearn.metrics import confusion_matrix
 from tensorflow import keras
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 import bert # https://github.com/kpe/bert-for-tf2/
@@ -37,7 +38,7 @@ parser.add_argument("--num_epochs", type=int, default=3, help="Maximum number of
 parser.add_argument("--test_size", type=float, default=None, help="Test size. Default depends on task.")
 parser.add_argument("--num_categories", type=int, default=None, help="Number of categoroies. Defaults to 2 for imdb, 3 otherwise.")
 parser.add_argument("--polarized", action='store_true', help="For reviews data: if true and num_categories=3, count only 1 and 5 as pos/neg")
-print('Experiment name is ' + current_time + '.')
+
 
 # read variables
 ARGS = parser.parse_args()
@@ -58,6 +59,8 @@ data_dir = ARGS.data_dir
 log_dir = ARGS.log_dir
 patience = ARGS.patience
 polarized = ARGS.polarized
+
+print('Experiment name is ' + experiment_name + '.')
 
 if task == "imdb":
     if model_name == None:
@@ -168,5 +171,7 @@ if __name__ == "__main__":
     print("Reloaded best parameters.")
     y_pred = model.predict(test_input_ids)
     y_pred = np.argmax(y_pred, axis=1)
+    matrix = confusion_matrix(test_labels, y_pred)
+    print(matrix.diagonal()/matrix.sum(axis=1))
     BMAC = balanced_accuracy_score(test_labels, y_pred)
     print(BMAC)

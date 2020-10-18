@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from tensorflow import keras
 from sklearn.metrics import balanced_accuracy_score
+from sklearn.metrics import confusion_matrix
 import bert # https://github.com/kpe/bert-for-tf2/
 from langdetect import detect
 from conversion import convert_examples_to_features, convert_text_to_examples
@@ -187,7 +188,10 @@ if __name__ == "__main__":
     y_pred = np.argmax(y_pred, axis=1)
     test['prediction'] = y_pred
     BMAC = balanced_accuracy_score(y, y_pred)
+    matrix = confusion_matrix(y, y_pred)
+    print(matrix.diagonal()/matrix.sum(axis=1))
     print(BMAC)
+    
     test.to_csv(os.path.join(log_dir, "predictions.csv"))
     
 
